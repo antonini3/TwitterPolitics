@@ -105,9 +105,3 @@ class Communicator:
 			streamPipe.filter(location = Locations)
 		
 		streamPipe.sample()
-
-
-# For testing purposes		
-if __name__ == "__main__":
-	Communicator(Terms = ["the"], Locations = None)
-
