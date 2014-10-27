@@ -4,5 +4,5 @@ from communicator import Communicator
 # from tokenizer.py import Tokenizer
 
 if __name__ == "__main__":
-	fileName = 'sample.csv'
-	Communicator(Terms = ["the"], Locations = None, Filename = fileName)
+    fileName = 'sample.csv'
+    Communicator(Terms = ["the"], Locations = None, Filename = fileName)
