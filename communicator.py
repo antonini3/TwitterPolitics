@@ -1,7 +1,8 @@
 # Tweepy documentation: http://tweepy.readthedocs.org/en/v2.3.0/index.html
 import tweepy, sys, codecs, os, csv, codecs
 from time import clock
-
+import json, datetime
+import tweetHandler
 
 '''
 
@@ -36,7 +37,7 @@ class TweetPoliticalStreamListener(tweepy.StreamListener):
 
     def setup(self, fileName, Terms):
         self.csvFile = codecs.open(os.getcwd() + '/database/' + fileName, 'wb', 'utf-8')
-        self.terms = Terms       
+        self.terms = Terms
 
     def on_status(self, status):
         if self.terms == None or any(term in status.text for term in self.terms):
@@ -137,11 +138,16 @@ class TweetCommunicator:
             pass
 
 class UserCommunicator:         #CHANGE THE QUERY
-    def __init__(self, query = 'None', language = "en", max_users = 100, locations = None):
-        twitterAuth = Authenticator()
+    def __init__(self, fileName):
+        self.twitterAuth = Authenticator()
+        self.jsonFile = codecs.open(os.getcwd() + '/database/' + fileName, 'wb', 'utf-8')
+
+    def get_users(self, query = 'None', language = "en", max_users = 100, locations = None):
+        twitterAuth = self.twitterAuth
         users = set()
         num_total_tweets = 0
         last_id = -1
+        userDict = {}
         while len(users) < max_users:
             count = sys.maxint - num_total_tweets
             try:
@@ -164,16 +170,23 @@ class UserCommunicator:         #CHANGE THE QUERY
                     author = tweet.author
                     user = author.screen_name
                     userID = author.id
-                    users.add((user, userID))
+                    if (userID, user) not in users:
+                        userInfo = {}
+                        userInfo['handle'] = user
+                        userDict[userID] = userInfo
+                    users.add((userID, user))
+
 
             except tweepy.TweepError, e:
                 print "ERROR:", e
                 break
 
-        'print users'
+        #for userID in userDict:
+            #print >> self.jsonFile, json.dumps({userID: userDict[userID]})
+        return userDict
 
-
-
+    def fill_users(self, users):
+        pass
 
 
 

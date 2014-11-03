@@ -4,7 +4,10 @@ from communicator import *
 # from tokenizer.py import Tokenizer
 
 if __name__ == "__main__":
-    fileName = 'sample.csv'
+    #fileName = 'sample.csv'
+    fileName = 'users.json'
     # TweetStreamingCommunicator(Terms = ["the"], Locations = None, Filename = fileName)
     # TweetCommunicator()
-    UserCommunicator()
+    userCommunicator = UserCommunicator(fileName)
+    users = userCommunicator.get_users()
+    userCommunicator.fill_users(users)
