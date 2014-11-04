@@ -1,6 +1,6 @@
 # Tweepy documentation: http://tweepy.readthedocs.org/en/v2.3.0/index.html
 import tweepy, sys, codecs, os, csv, codecs
-from time import clock
+import time
 import json, datetime
 import tweetHandler
 
@@ -142,7 +142,7 @@ class UserCommunicator:         #CHANGE THE QUERY
         self.twitterAuth = Authenticator()
         self.jsonFile = codecs.open(os.getcwd() + '/database/' + fileName, 'wb', 'utf-8')
 
-    def get_users(self, query = 'None', language = "en", max_users = 100, locations = None):
+    def get_users(self, query = '\s', language = "en", max_users = 100, locations = None):
         twitterAuth = self.twitterAuth
         users = set()
         num_total_tweets = 0
@@ -174,6 +174,7 @@ class UserCommunicator:         #CHANGE THE QUERY
                         userInfo = {}
                         userInfo['handle'] = user
                         userDict[userID] = userInfo
+
                     users.add((userID, user))
 
 
@@ -186,7 +187,33 @@ class UserCommunicator:         #CHANGE THE QUERY
         return userDict
 
     def fill_users(self, users):
-        pass
+        twitterAuth = self.twitterAuth
+        for userID in users:
+            allTweets = []
+
+            new_tweets = twitterAuth.api.user_timeline(user_ID = userID,count=200)
+            for tweet in new_tweets:
+                cleanedTweet = tweetHandler.tweetToDict(tweet)
+                allTweets.append(cleanedTweet)
+
+            oldest = allTweets[-1].id - 1
+
+            while len(new_tweets) > 0:
+                new_tweets = twitterAuth.api.user_timeline(user_ID=userID,count=200,max_id=oldest)
+                for tweet in new_tweets:
+                    cleanedTweet = tweetHandler.tweetToDict(tweet)
+                    allTweets.append(cleanedTweet)
+
+                oldest = allTweets[-1].id - 1
+
+            users[userID]['tweets'] = allTweets
+
+            users[userID]['followers'] = twitterAuth.api.followers_ids(user_ID=userID)
+
+            users[userID]['following'] = twitterAuth.api.friends_ids(user_ID=userID)
+
+            print >> self.jsonFile, json.dumps({userID:users[userID]})
+            break
 
 
 
