@@ -191,7 +191,7 @@ class UserCommunicator:         #CHANGE THE QUERY
         for userID in users:
             allTweets = []
 
-            new_tweets = twitterAuth.api.user_timeline(user_ID = userID,count=200)
+            new_tweets = twitterAuth.api.user_timeline(user_id = userID,count=200)
             for tweet in new_tweets:
                 cleanedTweet = tweetHandler.tweetToDict(tweet)
                 allTweets.append(cleanedTweet)
@@ -199,7 +199,7 @@ class UserCommunicator:         #CHANGE THE QUERY
             oldest = allTweets[-1].id - 1
 
             while len(new_tweets) > 0:
-                new_tweets = twitterAuth.api.user_timeline(user_ID=userID,count=200,max_id=oldest)
+                new_tweets = twitterAuth.api.user_timeline(user_id=userID,count=200,max_id=oldest)
                 for tweet in new_tweets:
                     cleanedTweet = tweetHandler.tweetToDict(tweet)
                     allTweets.append(cleanedTweet)
@@ -208,9 +208,16 @@ class UserCommunicator:         #CHANGE THE QUERY
 
             users[userID]['tweets'] = allTweets
 
-            users[userID]['followers'] = twitterAuth.api.followers_ids(user_ID=userID)
+            users[userID]['followers'] = twitterAuth.api.followers_ids(user_id=userID)
 
-            users[userID]['following'] = twitterAuth.api.friends_ids(user_ID=userID)
+            users[userID]['following'] = twitterAuth.api.friends_ids(user_id=userID)
+
+            favorites = []
+            favs = twitterAuth.api.favorites(user_id=userID)
+            for tweet in favs:
+                cleanedTweet = tweetHandler.tweetToDict(tweet)
+                favorites.append(cleanedTweet)
+            users[userID]['favorites'] = favorites
 
             print >> self.jsonFile, json.dumps({userID:users[userID]})
             break
