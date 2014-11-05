@@ -1,8 +1,10 @@
 # Tweepy documentation: http://tweepy.readthedocs.org/en/v2.3.0/index.html
-import tweepy, sys, codecs, os, csv, codecs
+import tweepy, sys, codecs, os, csv, codecs, thread
 import time
 import json, datetime
 import tweetHandler
+from multiprocessing import Pool
+from multiprocessing.dummy import Pool as ThreadPool
 
 '''
 
@@ -12,19 +14,27 @@ Authenticates a given session for Twitter. Logs into "antonini3" :)
 
 '''
 class Authenticator:
-    def __init__(self):
-
-        ''' OATH AUTHENTIFICATON | DON'T CHANGE THESE '''
-        consumer_key = '7qQNsEsbdrzkJf8Zx5z4DM76n'
-        consumer_secret = 'CO5uOCVXRqsOAQRaSzF3JIvmy85zU4PNMolB1XYBCuUxdgA6bZ'
-        access_token = '54123389-qgXroCM5FxVBkMTJGXXKOSQo8nMxGXFQdXB1tIfEl'
-        access_token_secret = 'mVVF07bNaQqxzic9qHbCksmpNX0zwGH9mz3StwQ386n3J'
+    def __init__(self, person_char = 'a'):
+        self.person = person_char
+        if person_char == 'A' or person_char == 'a':
+            consumer_key = '7qQNsEsbdrzkJf8Zx5z4DM76n'
+            consumer_secret = 'CO5uOCVXRqsOAQRaSzF3JIvmy85zU4PNMolB1XYBCuUxdgA6bZ'
+            access_token = '54123389-qgXroCM5FxVBkMTJGXXKOSQo8nMxGXFQdXB1tIfEl'
+            access_token_secret = 'mVVF07bNaQqxzic9qHbCksmpNX0zwGH9mz3StwQ386n3J'
+        elif person_char == 'L' or person_char == 'l':
+            consumer_key = 'pLrNhYtZ1fejZp6ieXBESWdL3'
+            consumer_secret = 'nM3VY8IPdhezYwYXFH7u2EcWFVCwg4a3U0PXlsp0GUF2pn94mH'
+            access_token = '21001149-wyjVaXQFOdvbbK8ok70X9wu5zinilSnRojaoFtBI9'
+            access_token_secret = 'LyxbkfaxKIuU8K1TfrPWF8BvOSoeRzUr1aUIs0n1fjQkH'    
+        else:
+            print 'Not a valid individual! Try again with \'l\' or \'a\'.' 
+            return       
 
         self.auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
         self.auth.set_access_token(access_token, access_token_secret)
 
         # API is main communicator with twitter
-        self.api = tweepy.API(self.auth)
+        self.api = tweepy.API(self.auth, wait_on_rate_limit=True)
 
 '''
 
@@ -139,11 +149,12 @@ class TweetCommunicator:
 
 class UserCommunicator:         #CHANGE THE QUERY
     def __init__(self, fileName):
-        self.twitterAuth = Authenticator()
+        self.twitterAuthAlpha = Authenticator('a')
+        self.twitterAuthBeta = Authenticator('l')
         self.jsonFile = codecs.open(os.getcwd() + '/database/' + fileName, 'wb', 'utf-8')
 
     def get_users(self, query = '\s', language = "en", max_users = 100, locations = None):
-        twitterAuth = self.twitterAuth
+        twitterAuth = self.twitterAuthAlpha
         users = set()
         num_total_tweets = 0
         last_id = -1
@@ -187,33 +198,58 @@ class UserCommunicator:         #CHANGE THE QUERY
         return userDict
 
     def fill_users(self, users):
-        twitterAuth = self.twitterAuth
-        for userID in users:
+
+        def grab_alpha(userID):
+            grab_user_info(userID, self.twitterAuthAlpha)
+
+        def grab_beta(userID):
+            grab_user_info(userID, self.twitterAuthBeta)
+
+        def grab_user_info(userID, twitterAuth):
             allTweets = []
 
-            new_tweets = twitterAuth.api.user_timeline(user_ID = userID,count=200)
+            print "Starting collection of tweets for", users[userID]["handle"]
+
+            new_tweets = twitterAuth.api.user_timeline(user_id = userID,count=200)
             for tweet in new_tweets:
                 cleanedTweet = tweetHandler.tweetToDict(tweet)
                 allTweets.append(cleanedTweet)
 
-            oldest = allTweets[-1].id - 1
+            oldest = new_tweets[-1].id - 1
+
+            counter = len(allTweets)
 
             while len(new_tweets) > 0:
-                new_tweets = twitterAuth.api.user_timeline(user_ID=userID,count=200,max_id=oldest)
+                print "We have added %d number of new tweets; total number of tweets is %d" % (len(new_tweets), len(allTweets))
+                new_tweets = twitterAuth.api.user_timeline(user_id=userID,count=200,max_id=oldest)
                 for tweet in new_tweets:
                     cleanedTweet = tweetHandler.tweetToDict(tweet)
                     allTweets.append(cleanedTweet)
 
-                oldest = allTweets[-1].id - 1
+                if len(new_tweets) > 0:
+                    oldest = new_tweets[-1].id - 1
+
+            print "Ended collection of tweets for", users[userID]["handle"]
 
             users[userID]['tweets'] = allTweets
 
-            users[userID]['followers'] = twitterAuth.api.followers_ids(user_ID=userID)
+            users[userID]['followers'] = twitterAuth.api.followers_ids(user_id=userID)
 
-            users[userID]['following'] = twitterAuth.api.friends_ids(user_ID=userID)
+            users[userID]['following'] = twitterAuth.api.friends_ids(user_id=userID)
 
             print >> self.jsonFile, json.dumps({userID:users[userID]})
-            break
+
+        alphaPool = ThreadPool(5)
+        betaPool = ThreadPool(5)
+
+        user_items = users.items()
+        alphaUsers = dict(user_items[len(users)/2:])
+        betaUsers = dict(user_items[:len(users)/2])
+
+        alphaResults = alphaPool.map(grab_alpha, alphaUsers)
+        betaResults = betaPool.map(grab_beta, betaUsers)
+        alphaPool.join()
+        betaPool.join()
 
 
 
