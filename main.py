@@ -8,6 +8,6 @@ if __name__ == "__main__":
     fileName = 'users.json'
     # TweetStreamingCommunicator(Terms = ["the"], Locations = None, Filename = fileName)
     # TweetCommunicator()
-    userCommunicator = UserCommunicator(fileName, max_users=10000)
-    users = userCommunicator.get_users()
+    userCommunicator = UserCommunicator(fileName)
+    users = userCommunicator.get_users(max_users=10000)
     userCommunicator.fill_users(users)
