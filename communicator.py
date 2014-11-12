@@ -1,10 +1,12 @@
 # Tweepy documentation: http://tweepy.readthedocs.org/en/v2.3.0/index.html
-import tweepy, sys, codecs, os, csv, codecs, thread
+import tweepy, sys, codecs, os, csv, codecs, thread, threading
 import time
 import json, datetime
 import tweetHandler
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
+
+import random
 
 '''
 
@@ -256,9 +258,7 @@ class UserCommunicator:         #CHANGE THE QUERY
 
             print >> self.jsonFile, json.dumps({userID:users[userID]})
 
-        alphaPool = ThreadPool(5)
-        betaPool = ThreadPool(5)
-        gammaPool = ThreadPool(5)
+        
 
         user_items = users.items()
         first_marker = len(users) / 3
@@ -267,10 +267,34 @@ class UserCommunicator:         #CHANGE THE QUERY
         betaUsers = dict(user_items[first_marker:second_marker])
         gammaUsers = dict(user_items[second_marker:])
 
-        alphaResults = alphaPool.map(grab_alpha, alphaUsers)
-        betaResults = betaPool.map(grab_beta, betaUsers)
-        gammaResults = gammaPool.map(grab_gamma, gammaUsers)
-        alphaPool.join()
-        betaPool.join()
-        gammaPool.join()
+        def runAlpha(users):
+            alphaPool = ThreadPool(3)
+            alphaResults = alphaPool.map(grab_alpha, alphaUsers)
+            alphaPool.join()
+
+        def runBeta(users):
+            betaPool = ThreadPool(3)
+            betaResults = betaPool.map(grab_beta, betaUsers)
+            betaPool.join()
+            
+
+        def runGamma(users):
+            gammaPool = ThreadPool(3)
+            gammaResults = gammaPool.map(grab_gamma, gammaUsers)
+            gammaPool.join()
+
+        a = threading.Thread(target=runAlpha, args=(alphaUsers,))
+        b = threading.Thread(target=runBeta, args=(betaUsers,))
+        g = threading.Thread(target=runGamma, args=(gammaUsers,))
+
+        a.start()
+        b.start()
+        g.start()
+
+        a.join()
+        b.join()
+        g.join()
+
+
+
 
