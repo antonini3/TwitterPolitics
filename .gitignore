@@ -1,8 +1,8 @@
 # FILE TYPES TO IGNORE # 
 *.pyc
 *.pem
-
-
+*.json
+database/*
 
 # OS GENERATED FILES #
 .DS_Store

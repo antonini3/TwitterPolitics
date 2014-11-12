@@ -26,6 +26,11 @@ class Authenticator:
             consumer_secret = 'nM3VY8IPdhezYwYXFH7u2EcWFVCwg4a3U0PXlsp0GUF2pn94mH'
             access_token = '21001149-wyjVaXQFOdvbbK8ok70X9wu5zinilSnRojaoFtBI9'
             access_token_secret = 'LyxbkfaxKIuU8K1TfrPWF8BvOSoeRzUr1aUIs0n1fjQkH'    
+        elif person_char == 'C' or person_char == 'c':
+            consumer_key = 'FN2skjivUJaJc78nst5pK30ou'
+            consumer_secret = '4AYR4SOJYJ6e1Z1sI7mX1GJ88XgHUHoJXkE2tQh52z5jLrlGIa'
+            access_token = '192229632-dEBH8e8RzqmihGDqGV1X1GnzQTNWEIMcKeo1PLJM'
+            access_token_secret = '3GJqnJF5ByzgiabsgF3CVufqj0NuEsCRWcIb5eDM3GbOu'
         else:
             print 'Not a valid individual! Try again with \'l\' or \'a\'.' 
             return       
@@ -151,6 +156,7 @@ class UserCommunicator:         #CHANGE THE QUERY
     def __init__(self, fileName):
         self.twitterAuthAlpha = Authenticator('a')
         self.twitterAuthBeta = Authenticator('l')
+        self.twitterAuthGamma = Authenticator('c')
         self.jsonFile = codecs.open(os.getcwd() + '/database/' + fileName, 'wb', 'utf-8')
 
     def get_users(self, query = '\s', language = "en", max_users = 100, locations = None):
@@ -205,6 +211,9 @@ class UserCommunicator:         #CHANGE THE QUERY
         def grab_beta(userID):
             grab_user_info(userID, self.twitterAuthBeta)
 
+        def grab_gamma(userID):
+            grab_user_info(userID, self.twitterAuthGamma)
+
         def grab_user_info(userID, twitterAuth):
             allTweets = []
 
@@ -249,15 +258,19 @@ class UserCommunicator:         #CHANGE THE QUERY
 
         alphaPool = ThreadPool(5)
         betaPool = ThreadPool(5)
+        gammaPool = ThreadPool(5)
 
         user_items = users.items()
-        alphaUsers = dict(user_items[len(users)/2:])
-        betaUsers = dict(user_items[:len(users)/2])
+        first_marker = len(users) / 3
+        second_marker = (len(users) * 2) / 3
+        alphaUsers = dict(user_items[:first_marker])
+        betaUsers = dict(user_items[first_marker:second_marker])
+        gammaUsers = dict(user_items[second_marker:])
 
         alphaResults = alphaPool.map(grab_alpha, alphaUsers)
         betaResults = betaPool.map(grab_beta, betaUsers)
+        gammaResults = gammaPool.map(grab_gamma, gammaUsers)
         alphaPool.join()
         betaPool.join()
-
-
+        gammaPool.join()
 
