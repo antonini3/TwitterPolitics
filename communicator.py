@@ -29,15 +29,15 @@ class Authenticator:
             consumer_key = 'pLrNhYtZ1fejZp6ieXBESWdL3'
             consumer_secret = 'nM3VY8IPdhezYwYXFH7u2EcWFVCwg4a3U0PXlsp0GUF2pn94mH'
             access_token = '21001149-wyjVaXQFOdvbbK8ok70X9wu5zinilSnRojaoFtBI9'
-            access_token_secret = 'LyxbkfaxKIuU8K1TfrPWF8BvOSoeRzUr1aUIs0n1fjQkH'    
+            access_token_secret = 'LyxbkfaxKIuU8K1TfrPWF8BvOSoeRzUr1aUIs0n1fjQkH'
         elif person_char == 'C' or person_char == 'c':
             consumer_key = 'FN2skjivUJaJc78nst5pK30ou'
             consumer_secret = '4AYR4SOJYJ6e1Z1sI7mX1GJ88XgHUHoJXkE2tQh52z5jLrlGIa'
             access_token = '192229632-dEBH8e8RzqmihGDqGV1X1GnzQTNWEIMcKeo1PLJM'
             access_token_secret = '3GJqnJF5ByzgiabsgF3CVufqj0NuEsCRWcIb5eDM3GbOu'
         else:
-            print 'Not a valid individual! Try again with \'l\' or \'a\'.' 
-            return       
+            print 'Not a valid individual! Try again with \'l\' or \'a\'.'
+            return
 
         self.auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
         self.auth.set_access_token(access_token, access_token_secret)
@@ -106,6 +106,7 @@ class UserCommunicator:
             grab_user_info(userID, self.twitterAuthGamma)
 
         def grab_user_info(userID, twitterAuth):
+            '''
             allTweets = []
 
 
@@ -133,10 +134,12 @@ class UserCommunicator:
             print "Ended collection of tweets for", userID
 
             users[userID]['tweets'] = allTweets
+            '''
+            print "Getting info from: ", userID
+            users[userID]['followers'] = twitterAuth.api.followers_ids(id=userID)
 
-            #users[userID]['followers'] = twitterAuth.api.followers_ids(id=userID)
-
-            #users[userID]['following'] = twitterAuth.api.friends_ids(id=userID)
+            users[userID]['following'] = twitterAuth.api.friends_ids(id=userID)
+            print "Finished getting info from: ", userID
 
 
             #favorites = []
@@ -164,7 +167,7 @@ class UserCommunicator:
             betaPool = ThreadPool(3)
             betaResults = betaPool.map(grab_beta, betaUsers)
             betaPool.join()
-            
+
 
         def runGamma(users):
             gammaPool = ThreadPool(3)
