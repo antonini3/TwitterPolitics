@@ -1,6 +1,8 @@
 import collections
 import os, codecs
 import json
+import random
+import math
 
 def read_file():
 	f = open(os.getcwd() + '/database/all_politicians_twitter.json')
@@ -57,6 +59,7 @@ def politicianLearner():
 		features = extractFeatures(politicians[politician])
 		y = float(politicians[politician]["ideology"])
 		training_data.append((features, y))
+	#testing_data = random.sample(training_data, 100)
 
 	weights = collections.Counter()
 
@@ -69,9 +72,11 @@ def politicianLearner():
 		return new_features
 
 	stepSize = 0.001
-	numIters = 2
+	numIters = 20
 	counter = 0
 	for i in range(numIters):
+		#if i > 0:
+			#stepSize = 0.1/float(math.sqrt(i))
 		sum_der_loss = collections.Counter()
 		for politician in training_data:
 			features, y = politician
@@ -83,7 +88,6 @@ def politicianLearner():
 			der_loss[item] = sum_der_loss[item] / float(len(politicians))
 		increment(weights, -stepSize, der_loss)
 		print "done: " + str(counter)
-		print weights
 
 		counter += 1
 	new_weights = {}
