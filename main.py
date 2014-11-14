@@ -5,7 +5,7 @@ from communicator import *
 def grabUsers():
     fileName = 'users_' + time.strftime("%H:%M:%S") + '.json'
     userCommunicator = UserCommunicator(fileName)
-    users = userCommunicator.get_users(max_users=100)
+    users = userCommunicator.get_users(max_users=50)
     userCommunicator.fill_users(users)
 
 
@@ -19,5 +19,5 @@ def grabPoliticians():
 
 
 if __name__ == "__main__":
-	grabPoliticians()
-	# grabUsers()
+	#grabPoliticians()
+	grabUsers()

@@ -3,7 +3,7 @@ import os, codecs
 import json
 
 def read_file():
-	f = open(os.getcwd() + '/database/temp_politicians_twitter.json')
+	f = open(os.getcwd() + '/database/all_politicians_twitter.json')
 	data = {}
 	counter = 0
 	for line in f:
@@ -36,14 +36,15 @@ def parse_tweets(tweets):
 def extract_follow(followers, typeUsers):
 	follower_dict = collections.Counter()
 	for follower in followers:
-		follower_dict[typeUsers + ": " + str(follower)] = 1
+		follower_dict[follower] = 1
 	return follower_dict
 
 def extractFeatures(politician):
 	features = collections.Counter()
 	#features += parse_tweets(politician["tweets"])
-	features += extract_follow(politician["followers"], "followers")
+	#features += extract_follow(politician["followers"], "followers")
 	features += extract_follow(politician["following"], "following")
+
 	#all other features
 	return features
 
@@ -62,22 +63,34 @@ def politicianLearner():
 	def dirLoss(features, y):
 		dot_product = dotProduct(weights, features)
 		residual = 2 * (dot_product - y)
+		new_features = collections.Counter()
 		for feature in features:
-			features[feature] *= residual
-		return features
+			new_features[feature] = float(features[feature]) * float(residual)
+		return new_features
 
 	stepSize = 0.001
-	numIters = 20
+	numIters = 2
+	counter = 0
 	for i in range(numIters):
 		sum_der_loss = collections.Counter()
 		for politician in training_data:
 			features, y = politician
-			sum_der_loss += dirLoss(features, y)
+			dirL = dirLoss(features, y)
+			for feature in dirL:
+				sum_der_loss[feature] = sum_der_loss[feature] + dirL[feature]
 		der_loss = collections.Counter()
 		for item in sum_der_loss:
 			der_loss[item] = sum_der_loss[item] / float(len(politicians))
 		increment(weights, -stepSize, der_loss)
-	print >> weightsFile, weights
+		print "done: " + str(counter)
+		print weights
+
+		counter += 1
+	new_weights = {}
+	for weight in weights:
+		new_key = int(weight)
+		new_weights[new_key] = weights[weight]
+	print >> weightsFile, json.dumps(new_weights)
 
 if __name__ == "__main__":
 	politicianLearner()
