@@ -96,6 +96,8 @@ class UserCommunicator:
 
     def fill_users(self, users):
 
+        lock = threading.Lock()
+
         def grab_alpha(userID):
             grab_user_info(userID, self.twitterAuthAlpha)
 
@@ -135,10 +137,7 @@ class UserCommunicator:
             users[userID]['tweets'] = allTweets
 
             #users[userID]['followers'] = twitterAuth.api.followers_ids(id=userID)
-
             #users[userID]['following'] = twitterAuth.api.friends_ids(id=userID)
-
-
             #favorites = []
             #favs = twitterAuth.api.favorites(id=userID)
             #for tweet in favs:
@@ -146,7 +145,9 @@ class UserCommunicator:
                 #favorites.append(cleanedTweet)
             #users[userID]['favorites'] = favorites
 
+            lock.acquire()
             print >> self.jsonFile, json.dumps({userID:users[userID]})
+            lock.release()
 
         user_items = users.items()
         first_marker = len(users) / 3
