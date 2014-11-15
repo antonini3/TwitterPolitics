@@ -71,12 +71,12 @@ def politicianLearner():
 			new_features[feature] = float(features[feature]) * float(residual)
 		return new_features
 
-	stepSize = 0.001
+	stepSize = 0.0001
 	numIters = 20
 	counter = 0
 	for i in range(numIters):
-		#if i > 0:
-			#stepSize = 0.1/float(math.sqrt(i))
+		if i > 0:
+			stepSize = 0.0001/float(math.sqrt(i))
 		sum_der_loss = collections.Counter()
 		for politician in training_data:
 			features, y = politician

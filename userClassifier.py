@@ -57,6 +57,7 @@ def main():
     data = read_users()
     features = extract_features(data)
     weights = read_weights()
+    print len(weights)
     normalizer = 0
     for key, value in weights.items():
         normalizer += value
