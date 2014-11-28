@@ -108,9 +108,8 @@ class UserCommunicator:
             grab_user_info(userID, self.twitterAuthGamma)
 
         def grab_user_info(userID, twitterAuth):
-            '''
+            
             allTweets = []
-
 
             print "Starting collection of tweets for", userID
             new_tweets = twitterAuth.api.user_timeline(id=userID,count=200)
@@ -136,16 +135,15 @@ class UserCommunicator:
             print "Ended collection of tweets for", userID
 
             users[userID]['tweets'] = allTweets
-            '''
-
+            
             print "Getting info from: ", userID
             
-            # follower_id = []
-            # for page in tweepy.Cursor(api.followers_ids, id=userID).pages():
-            #     follower_id.extend(page)
+            follower_id = []
+            for page in tweepy.Cursor(twitterAuth.api.followers_ids, id=userID).pages():
+                follower_id.extend(page)
 
             # print len(follower_id)
-            # users[userID]['followers'] = follower_id
+            users[userID]['followers'] = follower_id
 
             following_id = []
             for page in tweepy.Cursor(twitterAuth.api.friends_ids, id=userID).pages():
@@ -154,12 +152,31 @@ class UserCommunicator:
             users[userID]['following'] = following_id
             print "Finished getting info from: ", userID
 
-            #favorites = []
-            #favs = twitterAuth.api.favorites(id=userID)
-            #for tweet in favs:
-                #cleanedTweet = tweetHandler.tweetToDict(tweet)
-                #favorites.append(cleanedTweet)
-            #users[userID]['favorites'] = favorites
+            all_favs = []
+
+            print "Starting collection of favorites for", userID
+            new_favs = twitterAuth.api.favorites(id=userID,count=200)
+            for tweet in new_favs:
+                cleanedTweet = tweetHandler.tweetToDict(tweet)
+                all_favs.append(cleanedTweet)
+
+            oldest_fav = new_favs[-1].id - 1
+
+            fav_count = len(all_favs)
+
+            while len(all_favs) > 0:
+                print "We have added %d number of new favorites; total number of favorites is %d" % (len(new_favs), len(all_favs))
+
+                new_favs = twitterAuth.api.favorites(id=userID,count=200,max_id=oldest_fav)
+                for tweet in new_favs:
+                    cleanedTweet = tweetHandler.tweetToDict(tweet)
+                    all_favs.append(cleanedTweet)
+
+                if len(new_favs) > 0:
+                    oldest_fav = new_favs[-1].id - 1
+            
+            users[userID]['favorites'] = all_favs
+            print "Finished collection of favorites for", userID
 
             lock.acquire()
             print >> self.jsonFile, json.dumps({userID:users[userID]})
