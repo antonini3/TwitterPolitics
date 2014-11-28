@@ -38,28 +38,44 @@ def parse_tweets(tweets):
 def extract_follow(followers, typeUsers):
 	follower_dict = collections.Counter()
 	for follower in followers:
-		follower_dict[follower] = 1
+			follower_dict[follower] = 1
 	return follower_dict
 
-def extractFeatures(politician):
+def extractFeatures(politician, feature_set):
 	features = collections.Counter()
-	#features += parse_tweets(politician["tweets"])
-	#features += extract_follow(politician["followers"], "followers")
-	features += extract_follow(politician["following"], "following")
+
+	if "tweets" in feature_set:
+		features += parse_tweets(politician["tweets"])
+	if "followers" in feature_set:
+		features += extract_follow(politician["followers"], "followers")
+	if "following" in feature_set:
+		features += extract_follow(politician["following"], "following")
 
 	#all other features
 	return features
 
-def politicianLearner():
+def export_testing_data(testing_data):
+	testing_data_file = codecs.open(os.getcwd() + '/database/' + 'testing_data.json' , 'wb')
+	for testing in testing_data:
+		print >> testing_data_file, json.dumps({testing:testing_data[testing]})
+
+def politicianLearner(feature_set):
 	politicians = read_file()
 	weightsFile = codecs.open(os.getcwd() + '/database/' + 'weightsFile.txt' , 'wb', 'utf-8')
 
+	testing_data = {}
+	testing_data_keys = random.sample(politicians.keys(), 100)
+	for key in testing_data_keys:
+		testing_data[key] = politicians[key]
+		del politicians[key]
+	export_testing_data(testing_data)
+
 	training_data = []
 	for politician in politicians:
-		features = extractFeatures(politicians[politician])
+		features = extractFeatures(politicians[politician], feature_set)
 		y = float(politicians[politician]["ideology"])
-		training_data.append((features, y))
-	#testing_data = random.sample(training_data, 100)
+		name = politician
+		training_data.append((name, features, y))
 
 	weights = collections.Counter()
 
@@ -75,11 +91,11 @@ def politicianLearner():
 	numIters = 20
 	counter = 0
 	for i in range(numIters):
-		if i > 0:
-			stepSize = 0.0001/float(math.sqrt(i))
+		#if i > 0:
+			#stepSize = 0.0001/float(math.sqrt(i))
 		sum_der_loss = collections.Counter()
 		for politician in training_data:
-			features, y = politician
+			name, features, y = politician
 			dirL = dirLoss(features, y)
 			for feature in dirL:
 				sum_der_loss[feature] = sum_der_loss[feature] + dirL[feature]
@@ -91,9 +107,27 @@ def politicianLearner():
 
 		counter += 1
 	new_weights = {}
+
+	weight_tuples = []
+	max_weight = (float("-infinity"), 0)
+	min_weight = (float("infinity"), 0)
+
 	for weight in weights:
+		if weights[weight] > max_weight[0]:
+			max_weight = (weights[weight], weight)
+		if weights[weight] < min_weight[0]:
+			min_weight = (weights[weight], weight)
+
+		weight_tuples.append((weights[weight], weight))
+
 		new_key = int(weight)
 		new_weights[new_key] = weights[weight]
+
+	sorted_weight_tuples = sorted(weight_tuples, key = lambda s: s[0])
+
+	top_weights = sorted_weight_tuples[:100]
+	bottom_weights = sorted_weight_tuples[-100:]
+
 	print >> weightsFile, json.dumps(new_weights)
 
 if __name__ == "__main__":

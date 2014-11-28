@@ -17,7 +17,11 @@ def grabPoliticians():
 	userCommunicator = UserCommunicator(fileName)
 	userCommunicator.fill_users(data)
 
+def sexy_beasts():
+    users = {54123389 : {"handle" : "antonini3"}, 21001149 : {"handle" : "lbronner"}, 192229632 : {"handle" : "ccibils"}}
+    userCommunicator = UserCommunicator("sexy_beasts.json")
+    userCommunicator.fill_users(users)
 
 if __name__ == "__main__":
 	#grabPoliticians()
-	grabUsers()
+    grabUsers()
