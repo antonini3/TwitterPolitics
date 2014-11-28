@@ -137,10 +137,21 @@ class UserCommunicator:
 
             users[userID]['tweets'] = allTweets
             '''
-            print "Getting info from: ", userID
-            users[userID]['followers'] = twitterAuth.api.followers_ids(id=userID)
 
-            users[userID]['following'] = twitterAuth.api.friends_ids(id=userID)
+            print "Getting info from: ", userID
+            
+            # follower_id = []
+            # for page in tweepy.Cursor(api.followers_ids, id=userID).pages():
+            #     follower_id.extend(page)
+
+            # print len(follower_id)
+            # users[userID]['followers'] = follower_id
+
+            following_id = []
+            for page in tweepy.Cursor(twitterAuth.api.friends_ids, id=userID).pages():
+                following_id.extend(page)
+
+            users[userID]['following'] = following_id
             print "Finished getting info from: ", userID
 
             #favorites = []
