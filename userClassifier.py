@@ -11,7 +11,7 @@ def read_weights():
     return weights
 
 def read_users():
-    f = open(os.getcwd() + '/database/users_testing.json')
+    f = open(os.getcwd() + '/database/all_politicians_twitter.json')
     data = {}
     counter = 0
     for line in f:
@@ -31,7 +31,8 @@ def extract_features(users):
         following = users[user]["following"]
         for follow in following:
             feature[follow] = 1
-        all_features[int(user)] = feature
+        all_features[user] = feature
+        # all_features[int(user)] = feature
     return all_features
 
 
