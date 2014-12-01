@@ -4,7 +4,7 @@ import userClassifier
 def create_feature_set():
     feature_set = set()
 
-    # feature_set.add("following")
+    feature_set.add("following")
     feature_set.add("followers")
 
     return feature_set
