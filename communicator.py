@@ -6,8 +6,7 @@ import tweetHandler
 from multiprocessing import Pool
 from multiprocessing.dummy import Pool as ThreadPool
 
-import unicodedata
-
+import unicodedata, re
 import random
 
 '''
@@ -50,7 +49,8 @@ class UserCommunicator:
         self.twitterAuthAlpha = Authenticator('a')
         self.twitterAuthBeta = Authenticator('l')
         self.twitterAuthGamma = Authenticator('c')
-        self.jsonFile = codecs.open(os.getcwd() + '/database/' + fileName, 'wb', 'utf-8')
+        self.jsonFile = codecs.open(os.getcwd() + '/database/' + fileName, 'ab', 'utf-8')
+        self.fileName = fileName
 
     def get_users(self, query = '\s', language = "en", max_users = 100, locations = None):
         twitterAuth = self.twitterAuthAlpha
@@ -98,121 +98,159 @@ class UserCommunicator:
 
         lock = threading.Lock()
 
-        def grab_alpha(userID):
-            grab_user_info(userID, self.twitterAuthAlpha)
+        def read_existing_data():
+            print "Reading past politicians..."
+            f = open(os.getcwd() + '/database/' + self.fileName)
+            data = {}
+            counter = 0
+            for line in f:
+                try:
+                    jline = json.loads(line)
+                    data[jline.keys()[0]] = jline[jline.keys()[0]]
+                except:
+                    counter += 1
+                    pass
+            set_of_users = set(data.keys())
 
-        def grab_beta(userID):
-            grab_user_info(userID, self.twitterAuthBeta)
+            print "Number wrong:", counter
+            if len(set_of_users) > 0:
+                print "Random user (sanity check):", random.sample(set_of_users, 1)
+            print "Num users:", len(set_of_users)
+            return set_of_users
 
-        def grab_gamma(userID):
-            grab_user_info(userID, self.twitterAuthGamma)
+
+        def multithreaded_grab(user_items):
+
+            def grab_alpha(userID):
+                grab_user_info(userID, self.twitterAuthAlpha)
+
+            def grab_beta(userID):
+                grab_user_info(userID, self.twitterAuthBeta)
+
+            def grab_gamma(userID):
+                grab_user_info(userID, self.twitterAuthGamma)
+                
+            def runAlpha(users):
+                alphaPool = ThreadPool(3)
+                alphaResults = alphaPool.map(grab_alpha, alphaUsers)
+                alphaPool.join()
+
+            def runBeta(users):
+                betaPool = ThreadPool(3)
+                betaResults = betaPool.map(grab_beta, betaUsers)
+                betaPool.join()
+
+            def runGamma(users):
+                gammaPool = ThreadPool(3)
+                gammaResults = gammaPool.map(grab_gamma, gammaUsers)
+                gammaPool.join()
+
+            first_marker = len(users) / 3
+            second_marker = (len(users) * 2) / 3
+            alphaUsers = dict(user_items[:first_marker])
+            betaUsers = dict(user_items[first_marker:second_marker])
+            gammaUsers = dict(user_items[second_marker:])
+
+            a = threading.Thread(target=runAlpha, args=(alphaUsers,))
+            b = threading.Thread(target=runBeta, args=(betaUsers,))
+            g = threading.Thread(target=runGamma, args=(gammaUsers,))
+
+            a.start()
+            b.start()
+            g.start()
+
+            a.join()
+            b.join()
+            g.join()
+
+        def singlethreaded_grab(user_items):
+            for user in dict(user_items):
+                grab_user_info(user, self.twitterAuthGamma)
 
         def grab_user_info(userID, twitterAuth):
-            
-            allTweets = []
-
-            print "Starting collection of tweets for", userID
-            new_tweets = twitterAuth.api.user_timeline(id=userID,count=200)
-            for tweet in new_tweets:
-                cleanedTweet = tweetHandler.tweetToDict(tweet)
-                allTweets.append(cleanedTweet)
-
-            oldest = new_tweets[-1].id - 1
-
-            counter = len(allTweets)
-
-            while len(new_tweets) > 0:
-                print "We have added %d number of new tweets; total number of tweets is %d" % (len(new_tweets), len(allTweets))
-
-                new_tweets = twitterAuth.api.user_timeline(id=userID,count=200,max_id=oldest)
+            def grab_tweet_info():
+                allTweets = []
+                print "Starting collection of tweets for", userID
+                new_tweets = twitterAuth.api.user_timeline(id=userID,count=200)
                 for tweet in new_tweets:
                     cleanedTweet = tweetHandler.tweetToDict(tweet)
                     allTweets.append(cleanedTweet)
 
-                if len(new_tweets) > 0:
-                    oldest = new_tweets[-1].id - 1
+                oldest = new_tweets[-1].id - 1 if len(new_tweets) > 0 else 0
 
-            print "Ended collection of tweets for", userID
+                while len(new_tweets) > 0:
+                    print "We have added %d number of new tweets; total number of tweets is %d" % (len(new_tweets), len(allTweets))
 
-            users[userID]['tweets'] = allTweets
-            
-            print "Getting info from: ", userID
-            
-            follower_id = []
-            for page in tweepy.Cursor(twitterAuth.api.followers_ids, id=userID).pages():
-                follower_id.extend(page)
+                    new_tweets = twitterAuth.api.user_timeline(id=userID,count=200,max_id=oldest)
+                    for tweet in new_tweets:
+                        cleanedTweet = tweetHandler.tweetToDict(tweet)
+                        allTweets.append(cleanedTweet)
 
-            # print len(follower_id)
-            users[userID]['followers'] = follower_id
+                    if len(new_tweets) > 0:
+                        oldest = new_tweets[-1].id - 1
 
-            following_id = []
-            for page in tweepy.Cursor(twitterAuth.api.friends_ids, id=userID).pages():
-                following_id.extend(page)
+                print "Ended collection of tweets for", userID
 
-            users[userID]['following'] = following_id
-            print "Finished getting info from: ", userID
+                return allTweets
 
-            all_favs = []
+            def grab_follower_info():
+                print "Getting follower info from: ", userID                
+                follower_id = []
+                for page in tweepy.Cursor(twitterAuth.api.followers_ids, id=userID).pages():
+                    follower_id.extend(page)
+                print "Ending follower info from: ", userID 
+                return follower_id
 
-            print "Starting collection of favorites for", userID
-            new_favs = twitterAuth.api.favorites(id=userID,count=200)
-            for tweet in new_favs:
-                cleanedTweet = tweetHandler.tweetToDict(tweet)
-                all_favs.append(cleanedTweet)
+            def grab_following_info():
+                print "Getting following info from: ", userID
+                following_id = []
+                for page in tweepy.Cursor(twitterAuth.api.friends_ids, id=userID).pages():
+                    following_id.extend(page)
+                print "Ending following info from: ", userID
+                return following_id
 
-            oldest_fav = new_favs[-1].id - 1
 
-            fav_count = len(all_favs)
-
-            while len(all_favs) > 0:
-                print "We have added %d number of new favorites; total number of favorites is %d" % (len(new_favs), len(all_favs))
-
-                new_favs = twitterAuth.api.favorites(id=userID,count=200,max_id=oldest_fav)
+            def grab_favorites_info():
+                all_favs = []
+                print "Starting collection of favorites for", userID
+                new_favs = twitterAuth.api.favorites(id=userID,count=200)
                 for tweet in new_favs:
                     cleanedTweet = tweetHandler.tweetToDict(tweet)
                     all_favs.append(cleanedTweet)
 
-                if len(new_favs) > 0:
-                    oldest_fav = new_favs[-1].id - 1
-            
-            users[userID]['favorites'] = all_favs
-            print "Finished collection of favorites for", userID
+                
+                oldest_fav = new_favs[-1].id - 1 if len(new_favs) > 0 else 0
 
-            lock.acquire()
-            print >> self.jsonFile, json.dumps({userID:users[userID]})
-            lock.release()
+                while len(new_favs) > 0:
+                    print "We have added %d number of new favorites; total number of favorites is %d" % (len(new_favs), len(all_favs))
 
-        user_items = users.items()
-        first_marker = len(users) / 3
-        second_marker = (len(users) * 2) / 3
-        alphaUsers = dict(user_items[:first_marker])
-        betaUsers = dict(user_items[first_marker:second_marker])
-        gammaUsers = dict(user_items[second_marker:])
+                    new_favs = twitterAuth.api.favorites(id=userID,count=200,max_id=oldest_fav)
+                    for tweet in new_favs:
+                        cleanedTweet = tweetHandler.tweetToDict(tweet)
+                        all_favs.append(cleanedTweet)
 
-        def runAlpha(users):
-            alphaPool = ThreadPool(3)
-            alphaResults = alphaPool.map(grab_alpha, alphaUsers)
-            alphaPool.join()
+                    if len(new_favs) > 0:
+                        oldest_fav = new_favs[-1].id - 1
+                
+                print "Finished collection of favorites for", userID
+                return all_favs
 
-        def runBeta(users):
-            betaPool = ThreadPool(3)
-            betaResults = betaPool.map(grab_beta, betaUsers)
-            betaPool.join()
+            try:
+                if userID not in past_users:
+                    users[userID]['tweets'] = grab_tweet_info()
+                    users[userID]['followers'] = grab_follower_info()
+                    users[userID]['following'] = grab_following_info()
+                    users[userID]['favorites'] = grab_favorites_info()
+                    lock.acquire()
+                    temp = json.dumps({userID:users[userID]})
+                    print >> self.jsonFile, temp
+                    lock.release()
+            except Exception as e:
+                print e
+                print ">> ERROR!"
+                print "User: ", userID
+                print "Shpiel: ", users[userID]
 
-
-        def runGamma(users):
-            gammaPool = ThreadPool(3)
-            gammaResults = gammaPool.map(grab_gamma, gammaUsers)
-            gammaPool.join()
-
-        a = threading.Thread(target=runAlpha, args=(alphaUsers,))
-        b = threading.Thread(target=runBeta, args=(betaUsers,))
-        g = threading.Thread(target=runGamma, args=(gammaUsers,))
-
-        a.start()
-        b.start()
-        g.start()
-
-        a.join()
-        b.join()
-        g.join()
+        past_users = read_existing_data()
+        multithreaded_grab(users.items())
+        # singlethreaded_grab(users.items())
