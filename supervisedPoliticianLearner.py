@@ -87,8 +87,8 @@ def politicianLearner(feature_set):
 			new_features[feature] = float(features[feature]) * float(residual)
 		return new_features
 
-	stepSize = 0.0001
-	numIters = 20
+	stepSize = 0.00011
+	numIters = 10
 	counter = 0
 	for i in range(numIters):
 		#if i > 0:
