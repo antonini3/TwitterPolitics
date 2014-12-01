@@ -29,6 +29,7 @@ def extract_features(users, feature_set):
     all_features = {}
     for user in users:
         feature = collections.Counter()
+
         if "following" in feature_set:
             following = users[user]["following"]
             for follow in following:
