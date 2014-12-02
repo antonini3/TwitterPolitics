@@ -8,40 +8,8 @@ def read_weights():
     data = json.load(f)
     weights = collections.Counter()
     for key, value in data.iteritems():
-        weights[int(key)] = value
+        weights[key] = value
     return weights
-
-def read_users():
-    f = open(os.getcwd() + '/database/all_politicians_twitter.json')
-    data = {}
-    counter = 0
-    for line in f:
-        try:
-            jline = json.loads(line)
-            data[jline.keys()[0]] = jline[jline.keys()[0]]
-        except:
-            counter += 1
-            pass
-    print counter
-    return data
-
-def extract_features(users, feature_set):
-    all_features = {}
-    for user in users:
-        feature = collections.Counter()
-
-        if "following" in feature_set:
-            following = users[user]["following"]
-            for follow in following:
-                feature[follow] = 1
-        if "followers" in feature_set:
-            followers = users[user]["followers"]
-            for follow in followers:
-                feature[follow] = 1
-        all_features[user] = feature
-
-    return all_features
-
 
 def dotProduct(d1, d2, sum_weights):
     if len(d1) < len(d2):
@@ -61,8 +29,8 @@ def classify(all_features, weights, normalizer):
         scores[user] = score
     return scores
 
-def get_testing_data():
-    f = open(os.getcwd() + '/database/testing_data.json')
+def get_features():
+    f = open(os.getcwd() + '/database/politician_features.json')
     data = {}
     counter = 0
     for line in f:
@@ -75,27 +43,10 @@ def get_testing_data():
     print counter
 
     real_ideology = collections.Counter()
-    for d in data:
-        real_ideology[d] = data[d]['ideology']
+    for p in data:
+        real_ideology[p] = float(p.split()[1])
     return data, real_ideology
 
-
-def actual_results():
-    f = open(os.getcwd() + '/database/all_politicians_twitter.json')
-    data = {}
-    counter = 0
-    for line in f:
-        try:
-            jline = json.loads(line)
-            data[jline.keys()[0]] = jline[jline.keys()[0]]
-        except:
-            counter += 1
-            pass
-    print counter
-    real_ideology = collections.Counter()
-    for d in data:
-        real_ideology[d] = data[d]['ideology']
-    return real_ideology
 
 def find_error(actual, scores):
     total_error = 0.0
@@ -113,13 +64,9 @@ def find_baseline_error(actual, scores):
     total_error /= float(len(actual))
     return total_error
 
-def main(feature_set):
-    #actual = actual_results()
-    #data = read_users()
-    #features = extract_features(data)
+def main(feature_set = None):
     weights = read_weights()
-    testing_data, actual = get_testing_data()
-    features = extract_features(testing_data, feature_set)
+    features, actual = get_features()
 
     normalizer = 0
     for key, value in weights.items():

@@ -20,7 +20,7 @@ def extractor(filename, all_politicians, past_politicians):
             features += extract_follow(politician["following"], "following")
 
         lock.acquire()
-        print >> json_file, json.dumps({politician_str: features})
+        print >> json_file, json.dumps({politician_str + ' ' + str(politician['ideology']): features})
         lock.release()
         
 
@@ -51,19 +51,19 @@ def extractor(filename, all_politicians, past_politicians):
                     hashtag_count += 1
 
         tweet_info['num_hashtags'] = hashtag_count
-        tweet_info['avg_word_length'] = total_chars / float(total_words) if total_words != 0 else 0
-        tweet_info['avg_tweet_length'] = total_tweet_length / float(len(tweets)) \
-            if len(tweets) != 0 else 0
+        # tweet_info['avg_word_length'] = round(total_chars / float(total_words), 1) if total_words != 0 else 0
+        # tweet_info['avg_tweet_length'] = round(total_tweet_length / float(len(tweets)), 1) \
+        #     if len(tweets) != 0 else 0
         
         return tweet_info, counts 
 
 
-    json_file = codecs.open(os.getcwd() + '/database/' + filename, 'ab', 'utf-8')
+    json_file = codecs.open(os.getcwd() + '/database/' + filename, 'wb', 'utf-8')
     lock = threading.Lock()
     feature_set = ['tweets', 'followers', 'following']
 
     for p in past_politicians:
-        del all_politicians[p]
+        del all_politicians[p.split()[0]]
     
     pool = ThreadPool(30)
     pool.map(extractFeatures, all_politicians)
@@ -99,7 +99,8 @@ if __name__ == "__main__":
     output_file_name = 'politician_features.json'
 
     all_politicians = get_data_from_file(info_file_name, tp = 'dict')
-    past_politicians = get_data_from_file(output_file_name, tp = 'set')
+    # past_politicians = get_data_from_file(output_file_name, tp = 'set')
+    past_politicians = set()
     print 'Past politicians:', len(past_politicians)
     print 'All politicians:', len(all_politicians)
     extractor(output_file_name, all_politicians, past_politicians)

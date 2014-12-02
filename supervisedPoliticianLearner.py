@@ -4,8 +4,8 @@ import json
 import random
 import math
 
-def read_file():
-	f = open(os.getcwd() + '/database/all_politicians_twitter.json')
+def read_file(fileName):
+	f = open(os.getcwd() + fileName)
 	data = {}
 	counter = 0
 	for line in f:
@@ -28,53 +28,31 @@ def increment(d1, scale, d2):
     for f, v in d2.items():
         d1[f] = d1.get(f, 0) + v * scale
 
-def parse_tweets(tweets):
-	tweet_map = collections.Counter()
-	for tweet in tweets:
-		content = collections.Counter(tweet["text"])
-		tweet_map += content
-	return tweet_map
-
-def extract_follow(followers, typeUsers):
-	follower_dict = collections.Counter()
-	for follower in followers:
-			follower_dict[follower] = 1
-	return follower_dict
-
-def extractFeatures(politician, feature_set):
-	features = collections.Counter()
-
-	if "tweets" in feature_set:
-		features += parse_tweets(politician["tweets"])
-	if "followers" in feature_set:
-		features += extract_follow(politician["followers"], "followers")
-	if "following" in feature_set:
-		features += extract_follow(politician["following"], "following")
-
-	#all other features
-	return features
-
 def export_testing_data(testing_data):
 	testing_data_file = codecs.open(os.getcwd() + '/database/' + 'testing_data.json' , 'wb')
 	for testing in testing_data:
 		print >> testing_data_file, json.dumps({testing:testing_data[testing]})
 
-def politicianLearner(feature_set):
-	politicians = read_file()
+def politicianLearner(feature_set = None):
+	feature_dict = read_file('/database/politician_features.json')
+
 	weightsFile = codecs.open(os.getcwd() + '/database/' + 'weightsFile.txt' , 'wb', 'utf-8')
 
 	testing_data = {}
-	testing_data_keys = random.sample(politicians.keys(), 100)
+	testing_data_keys = random.sample(feature_dict.keys(), 100)
 	for key in testing_data_keys:
-		testing_data[key] = politicians[key]
-		del politicians[key]
+		testing_data[key] = feature_dict[key]
+		del feature_dict[key]
 	export_testing_data(testing_data)
 
 	training_data = []
-	for politician in politicians:
-		features = extractFeatures(politicians[politician], feature_set)
-		y = float(politicians[politician]["ideology"])
-		name = politician
+	for politician in feature_dict:
+		# features = extractFeatures(politicians[politician], feature_set)
+		splitting = politician.split()
+
+		features = feature_dict[politician]
+		y = float(splitting[1])
+		name = splitting[0]
 		training_data.append((name, features, y))
 
 	weights = collections.Counter()
@@ -101,7 +79,7 @@ def politicianLearner(feature_set):
 				sum_der_loss[feature] = sum_der_loss[feature] + dirL[feature]
 		der_loss = collections.Counter()
 		for item in sum_der_loss:
-			der_loss[item] = sum_der_loss[item] / float(len(politicians))
+			der_loss[item] = sum_der_loss[item] / float(len(feature_dict))
 		increment(weights, -stepSize, der_loss)
 		print "done: " + str(counter)
 
@@ -120,7 +98,7 @@ def politicianLearner(feature_set):
 
 		weight_tuples.append((weights[weight], weight))
 
-		new_key = int(weight)
+		new_key = weight
 		new_weights[new_key] = weights[weight]
 
 	sorted_weight_tuples = sorted(weight_tuples, key = lambda s: s[0])
